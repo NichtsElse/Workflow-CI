@@ -8,19 +8,10 @@ Dataset yang digunakan adalah dataset hasil preprocessing, bukan dataset raw.
 
 from pathlib import Path
 import json
+import os
 import pandas as pd
 import mlflow
 import mlflow.sklearn
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    classification_report,
-    confusion_matrix,
-)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "breast_cancer_preprocessing"
@@ -47,11 +38,12 @@ def load_data():
 
 
 def main():
+    os.environ.pop("MLFLOW_RUN_ID", None)
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     X_train, X_test, y_train, y_test = load_data()
 
-    # Tracking lokal untuk CI. Folder mlruns akan di-upload sebagai artifact GitHub Actions.
     mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment("Workflow CI - Breast Cancer Classification")
 
