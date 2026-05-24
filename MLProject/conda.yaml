@@ -1,0 +1,13 @@
+name: workflow-ci-mlflow
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - mlflow==2.15.1
+      - scikit-learn==1.5.1
+      - pandas==2.2.2
+      - numpy==1.26.4
+      - cloudpickle==3.0.0
+      - psutil==6.0.0
