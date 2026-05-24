@@ -74,61 +74,57 @@ jobs:
           mkdir -p docker_model
           cp -r "$MODEL_PATH" docker_model/model
 
-          cat > docker_model/app.py <<'EOF'
-import mlflow.pyfunc
-import pandas as pd
-from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List
+          printf '%s\n' \
+          'import mlflow.pyfunc' \
+          'import pandas as pd' \
+          'from fastapi import FastAPI' \
+          'from pydantic import BaseModel' \
+          'from typing import List' \
+          '' \
+          'app = FastAPI(title="Breast Cancer MLflow Model API")' \
+          'model = mlflow.pyfunc.load_model("model")' \
+          '' \
+          'class PredictRequest(BaseModel):' \
+          '    data: List[List[float]]' \
+          '' \
+          '@app.get("/")' \
+          'def root():' \
+          '    return {"message": "MLflow model serving is running"}' \
+          '' \
+          '@app.post("/predict")' \
+          'def predict(request: PredictRequest):' \
+          '    df = pd.DataFrame(request.data)' \
+          '    predictions = model.predict(df)' \
+          '    return {"predictions": predictions.tolist()}' \
+          > docker_model/app.py
 
-app = FastAPI(title="Breast Cancer MLflow Model API")
+          printf '%s\n' \
+          'mlflow' \
+          'fastapi' \
+          'uvicorn' \
+          'pandas' \
+          'scikit-learn' \
+          'numpy' \
+          'cloudpickle' \
+          'psutil' \
+          'scipy' \
+          > docker_model/requirements.txt
 
-model = mlflow.pyfunc.load_model("model")
-
-
-class PredictRequest(BaseModel):
-    data: List[List[float]]
-
-
-@app.get("/")
-def root():
-    return {"message": "MLflow model serving is running"}
-
-
-@app.post("/predict")
-def predict(request: PredictRequest):
-    df = pd.DataFrame(request.data)
-    predictions = model.predict(df)
-    return {"predictions": predictions.tolist()}
-EOF
-
-          cat > docker_model/requirements.txt <<'EOF'
-mlflow
-fastapi
-uvicorn
-pandas
-scikit-learn
-numpy
-cloudpickle
-psutil
-scipy
-EOF
-
-          cat > docker_model/Dockerfile <<'EOF'
-FROM python:3.10-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY model ./model
-COPY app.py .
-
-EXPOSE 8080
-
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
-EOF
+          printf '%s\n' \
+          'FROM python:3.10-slim' \
+          '' \
+          'WORKDIR /app' \
+          '' \
+          'COPY requirements.txt .' \
+          'RUN pip install --no-cache-dir -r requirements.txt' \
+          '' \
+          'COPY model ./model' \
+          'COPY app.py .' \
+          '' \
+          'EXPOSE 8080' \
+          '' \
+          'CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]' \
+          > docker_model/Dockerfile
 
       - name: Build Docker image
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
