@@ -1,11 +1,3 @@
 Tautan Docker Hub:
+https://hub.docker.com/r/demxntia/breast-cancer-mlflow-ci
 
-Isi setelah Anda berhasil push image ke Docker Hub, contoh:
-https://hub.docker.com/r/username-dockerhub/breast-cancer-mlflow-ci
-
-Catatan:
-- Untuk Basic/Skilled, file ini boleh menjadi placeholder.
-- Untuk Advance, aktifkan secret GitHub:
-  DOCKER_USERNAME
-  DOCKER_PASSWORD
-- Workflow sudah disiapkan agar build dan push Docker image berjalan jika secret tersedia.
