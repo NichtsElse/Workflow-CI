@@ -52,17 +52,89 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: Build Docker image with MLflow
+      - name: Prepare Docker build context
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
         working-directory: MLProject
-        env:
-          MLFLOW_TRACKING_URI: file:./mlruns
         run: |
           RUN_ID=$(cat outputs/latest_run_id.txt)
-          mlflow models build-docker \
-            -m "runs:/$RUN_ID/model" \
-            -n "$DOCKER_USERNAME/breast-cancer-mlflow-ci:latest" \
-            --enable-mlserver
+          EXP_ID=$(find mlruns -mindepth 1 -maxdepth 1 -type d | head -n 1 | xargs -n 1 basename)
+          MODEL_PATH="mlruns/$EXP_ID/$RUN_ID/artifacts/model"
+
+          echo "RUN_ID=$RUN_ID"
+          echo "EXP_ID=$EXP_ID"
+          echo "MODEL_PATH=$MODEL_PATH"
+
+          if [ ! -d "$MODEL_PATH" ]; then
+            echo "Model artifact folder not found: $MODEL_PATH"
+            find mlruns -maxdepth 5 -type d
+            exit 1
+          fi
+
+          rm -rf docker_model
+          mkdir -p docker_model
+          cp -r "$MODEL_PATH" docker_model/model
+
+          cat > docker_model/app.py <<'EOF'
+import mlflow.pyfunc
+import pandas as pd
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI(title="Breast Cancer MLflow Model API")
+
+model = mlflow.pyfunc.load_model("model")
+
+
+class PredictRequest(BaseModel):
+    data: List[List[float]]
+
+
+@app.get("/")
+def root():
+    return {"message": "MLflow model serving is running"}
+
+
+@app.post("/predict")
+def predict(request: PredictRequest):
+    df = pd.DataFrame(request.data)
+    predictions = model.predict(df)
+    return {"predictions": predictions.tolist()}
+EOF
+
+          cat > docker_model/requirements.txt <<'EOF'
+mlflow
+fastapi
+uvicorn
+pandas
+scikit-learn
+numpy
+cloudpickle
+psutil
+scipy
+EOF
+
+          cat > docker_model/Dockerfile <<'EOF'
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY model ./model
+COPY app.py .
+
+EXPOSE 8080
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+EOF
+
+      - name: Build Docker image
+        if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
+        working-directory: MLProject/docker_model
+        run: |
+          docker build -t "$DOCKER_USERNAME/breast-cancer-mlflow-ci:latest" .
 
       - name: Push Docker image to Docker Hub
         if: ${{ env.DOCKER_USERNAME != '' && env.DOCKER_PASSWORD != '' }}
