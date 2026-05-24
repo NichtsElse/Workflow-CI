@@ -57,16 +57,14 @@ jobs:
         working-directory: MLProject
         run: |
           RUN_ID=$(cat outputs/latest_run_id.txt)
-          EXP_ID=$(find mlruns -mindepth 1 -maxdepth 1 -type d | head -n 1 | xargs -n 1 basename)
-          MODEL_PATH="mlruns/$EXP_ID/$RUN_ID/artifacts/model"
+          MODEL_PATH=$(find mlruns -path "*/$RUN_ID/artifacts/model" -type d | head -n 1)
 
           echo "RUN_ID=$RUN_ID"
-          echo "EXP_ID=$EXP_ID"
           echo "MODEL_PATH=$MODEL_PATH"
 
-          if [ ! -d "$MODEL_PATH" ]; then
-            echo "Model artifact folder not found: $MODEL_PATH"
-            find mlruns -maxdepth 5 -type d
+          if [ -z "$MODEL_PATH" ] || [ ! -d "$MODEL_PATH" ]; then
+            echo "Model artifact folder not found for RUN_ID: $RUN_ID"
+            find mlruns -maxdepth 6 -type d
             exit 1
           fi
 
