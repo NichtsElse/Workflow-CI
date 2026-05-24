@@ -13,6 +13,17 @@ import pandas as pd
 import mlflow
 import mlflow.sklearn
 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    classification_report,
+    confusion_matrix,
+)
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "breast_cancer_preprocessing"
 TRAIN_PATH = DATA_DIR / "train_preprocessed.csv"
